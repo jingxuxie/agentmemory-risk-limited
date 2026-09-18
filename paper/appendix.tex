@@ -204,6 +204,7 @@ The point-estimated knapsack and global expiration-time comparators spend risk a
 
 \subsection{Reproduction commands and scope of artifacts}
 From a clean Python environment in the repository root:
+\begin{minipage}{\linewidth}
 \begin{verbatim}
 python -m pip install -r requirements.txt
 python -m pytest -q
@@ -212,6 +213,7 @@ python experiments/additional_checks.py
 python experiments/make_figures.py
 make paper
 \end{verbatim}
+\end{minipage}
 The first two experiment scripts produce 12 CSVs; the figure script produces vector PDF figures, PNG previews, the main table, and a headline JSON. CSV hashes are recorded in \path{results/manifest.json}. Scientific results should reproduce numerically across supported library versions; exact bytes are checked when the runtime is identical. Wall-clock metadata are not deterministic and are not scientific outcomes. The experiments require only CPU numerical libraries, not a GPU, model weights, paid APIs, or downloads. Fetching the conference style, when absent, is a separate formatting step and has no role in the experiments.
 
 \section{Claim boundaries and unresolved extensions}\label{app:boundaries}
@@ -225,4 +227,4 @@ The paper does not prove the optimal expected cost at arbitrary nonzero hazards,
 For a fixed clean-history gate, more history simultaneously increases $E\leq r_\delta m$ and decreases the probability of acceptance. A policy allowed to select a shorter \emph{prespecified} subhistory can avoid some losses, but choosing the most favorable clean subhistory after seeing all outcomes is a selection problem. Our comparisons hold the historical window fixed and reveal that gate-specific tradeoff. They do not prove that access to additional data reduces the optimal attainable performance.
 
 \paragraph{Amortization and future directions.}
-Historical evidence acquired for other reasons may make deployment savings worthwhile. Purchasing an expensive pilot solely for one short workflow often does not. Reusing an independent pilot is harmless for per-workflow safety if each new gate history is properly specified, but a global multi-workflow target requires allocation or a joint analysis of its total failure event. A possible extension is to optimize evidence acquisition and deployment jointly; another is to replace the clean gate with an outcome-rich testing rule. Both need new guarantees rather than applying the present formulas outside their stated domains.
+Historical evidence acquired for other purposes can make reuse worthwhile, but purchasing a pilot for one short workflow may not. Reusing a pilot with new, properly specified gate histories preserves per-workflow safety; a global multi-workflow target needs its own risk allocation or joint analysis. Optimal evidence acquisition and outcome-rich testing rules remain outside our guarantees.
