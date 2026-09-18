@@ -1,0 +1,74 @@
+{
+  "stable_1000_joint_clean": {
+    "saved_percent": 83.2675079111,
+    "failure_probability": 0.0125468541736
+  },
+  "stable_1000_singleton_clean": {
+    "saved_percent": 41.4976697979,
+    "failure_probability": 0.00192094569313
+  },
+  "stable_1000_pilot_partition": {
+    "saved_percent": 81.7158304414,
+    "failure_probability": 0.0118993452368
+  },
+  "stable_5000_joint_clean": {
+    "saved_percent": 55.369617575999996,
+    "failure_probability": 0.011613508192
+  },
+  "stable_5000_singleton_clean": {
+    "saved_percent": 77.7563224094,
+    "failure_probability": 0.00800440602101
+  },
+  "stable_5000_pilot_partition": {
+    "saved_percent": 58.453937644599996,
+    "failure_probability": 0.0123582533319
+  },
+  "mixed_1000_joint_clean": {
+    "saved_percent": 1.9094770360499997,
+    "failure_probability": 0.0079916783774
+  },
+  "mixed_1000_singleton_clean": {
+    "saved_percent": 31.308527929300002,
+    "failure_probability": 0.010162274239
+  },
+  "mixed_1000_pilot_partition": {
+    "saved_percent": 59.076384176,
+    "failure_probability": 0.0178406092811
+  },
+  "mixed_5000_joint_clean": {
+    "saved_percent": 8.981920152079999e-07,
+    "failure_probability": 4.43902424965e-09
+  },
+  "mixed_5000_singleton_clean": {
+    "saved_percent": 52.4177816567,
+    "failure_probability": 0.0067774275818
+  },
+  "mixed_5000_pilot_partition": {
+    "saved_percent": 44.0297514522,
+    "failure_probability": 0.0117943603541
+  },
+  "active_1000_joint_clean": {
+    "saved_percent": 2.0376822305799998,
+    "failure_probability": 0.00812438464289
+  },
+  "active_1000_singleton_clean": {
+    "saved_percent": 26.276705775499998,
+    "failure_probability": 0.0340191857485
+  },
+  "active_1000_pilot_partition": {
+    "saved_percent": 30.3878801837,
+    "failure_probability": 0.0393834127754
+  },
+  "active_5000_joint_clean": {
+    "saved_percent": 5.99362456333e-07,
+    "failure_probability": 2.97691782387e-09
+  },
+  "active_5000_singleton_clean": {
+    "saved_percent": 13.6465725215,
+    "failure_probability": 0.0254802274191
+  },
+  "active_5000_pilot_partition": {
+    "saved_percent": 8.20674811745,
+    "failure_probability": 0.0241183910632
+  }
+}

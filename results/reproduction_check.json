@@ -1,0 +1,67 @@
+{
+  "scientific_csvs": 12,
+  "strict": false,
+  "all_numerically_equal": true,
+  "files": [
+    {
+      "file": "adaptive_enumeration.csv",
+      "rows": 1856,
+      "identical_bytes": true
+    },
+    {
+      "file": "assumption_failures.csv",
+      "rows": 17,
+      "identical_bytes": true
+    },
+    {
+      "file": "cold_start.csv",
+      "rows": 120,
+      "identical_bytes": true
+    },
+    {
+      "file": "cp_calibration.csv",
+      "rows": 1200,
+      "identical_bytes": true
+    },
+    {
+      "file": "evidence_tradeoff.csv",
+      "rows": 40,
+      "identical_bytes": true
+    },
+    {
+      "file": "exhaustive_worlds.csv",
+      "rows": 60,
+      "identical_bytes": true
+    },
+    {
+      "file": "explicit_rollouts.csv",
+      "rows": 27,
+      "identical_bytes": true
+    },
+    {
+      "file": "exposure_geometry.csv",
+      "rows": 300,
+      "identical_bytes": true
+    },
+    {
+      "file": "partition_witnesses.csv",
+      "rows": 300,
+      "identical_bytes": true
+    },
+    {
+      "file": "randomized_lp.csv",
+      "rows": 10,
+      "identical_bytes": true
+    },
+    {
+      "file": "workflow_results.csv",
+      "rows": 900,
+      "identical_bytes": true
+    },
+    {
+      "file": "workflow_summary.csv",
+      "rows": 90,
+      "identical_bytes": true
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "seed_policy": "explicit fixed seeds in experiments/run_all.py",
+  "python": "3.13.15",
+  "numpy": "2.3.5",
+  "seconds": 10.239149332046509,
+  "quick": false,
+  "csv_files": 9,
+  "row_counts": {
+    "adaptive_enumeration.csv": 1856,
+    "assumption_failures.csv": 17,
+    "cold_start.csv": 120,
+    "evidence_tradeoff.csv": 40,
+    "explicit_rollouts.csv": 27,
+    "exposure_geometry.csv": 300,
+    "partition_witnesses.csv": 300,
+    "workflow_results.csv": 900,
+    "workflow_summary.csv": 90
+  }
+}
