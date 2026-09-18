@@ -1,0 +1,86 @@
+name: Reproduce research and build manuscript
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: research-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install numerical dependencies
+        run: python -m pip install -r requirements-lock.txt
+      - name: Tests
+        run: python -m pytest -q --junitxml=pytest-results.xml
+      - name: Preserve committed reference results
+        run: |
+          if [ -d results ]; then cp -r results /tmp/reference-results; fi
+      - name: Regenerate scientific results
+        run: |
+          python experiments/run_all.py
+          python experiments/additional_checks.py
+          python experiments/make_figures.py
+          python scripts/check_reproduction.py
+      - name: Compare earlier committed scientific values
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          ref=Path('/tmp/reference-results')
+          for p in ref.glob('*.csv'):
+              a,b=pd.read_csv(p),pd.read_csv(Path('results')/p.name)
+              assert list(a.columns)==list(b.columns) and a.shape==b.shape,p.name
+              for c in a:
+                  if pd.api.types.is_numeric_dtype(a[c]):
+                      assert np.allclose(a[c],b[c],rtol=1e-9,atol=2e-10,equal_nan=True),(p.name,c)
+                  else:
+                      assert a[c].equals(b[c]),(p.name,c)
+          print('All existing scientific reference files match.')
+          PY
+      - name: Install LaTeX and build official-style PDF
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-extra texlive-fonts-recommended poppler-utils
+          make paper
+          pdfinfo paper/main.pdf
+          if grep -E 'LaTeX Warning:.*undefined|Package natbib Warning:.*undefined|Overfull' paper/main.log; then
+            echo 'Manuscript needs reference or layout repair.'
+            exit 1
+          fi
+      - name: Upload complete research artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: research-artifacts
+          path: |
+            paper/
+            results/
+            pytest-results.xml
+          if-no-files-found: error
+      - name: Commit generated manuscript and results
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add results paper/main.pdf paper/figures paper/table_savings.tex paper/iclr2027_conference.sty
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Record independently rerun synthetic results and compiled manuscript [skip ci]'
+          git push origin HEAD:main

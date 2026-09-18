@@ -1,0 +1,234 @@
+\documentclass{article}
+\IfFileExists{iclr2027_conference.sty}{\usepackage{iclr2027_conference}}{\usepackage{draft_layout}}
+\usepackage{times,amsmath,amssymb,amsthm,graphicx,booktabs,microtype,xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd{\@maketitle}{Paper under double-blind review}{Research draft; not submitted}{}{}
+\makeatother
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newcommand{\Pp}{\mathbb P}
+\newcommand{\Ee}{\mathbb E}
+\newcommand{\1}{\mathbf 1}
+\newcommand{\risk}{\mathcal R}
+\newcommand{\cA}{\mathcal A}
+\title{Risk-Limited Memory Reuse:\\Sharp Cold-Start Limits and Joint-History Audit Schedules}
+\author{Anonymous research draft}
+\date{}
+\begin{document}
+\maketitle
+\lhead{Research draft --- September 2026; not submitted}
+\begin{abstract}
+An agent can remember an observation correctly and nevertheless act incorrectly because its source has changed. We study the verification cost of controlling the probability of any stale-memory use in a finite workflow, with unknown source-change rates and truthful audits. For a source used at every step, we characterize the optimal expected audit saving on a stable environment among all uniformly reliable randomized adaptive policies. Every policy is dominated, at the same stable-instance saving, by a mixture of two adjacent policies that audit first and reuse a final block only after an unchanged history. A closed-form relaxation implies that a 5\% failure budget permits at most 12.72\% skipped checks without prior history. For multiple independent sources, we derive a sharp joint-history certificate governed by the maximum exposure-to-history ratio rather than the number of sources. Independent pilot observations can select source groups and audit budgets without invalidating this certificate. An exact dynamic program optimizes a restricted, discretized grouping objective. Synthetic validation includes 1,856 adaptive policies, 71,808 explicit change worlds, and 54,000 workflow rollouts. Grouping improves deployment audit savings in some heterogeneous regimes but can deteriorate with longer histories. The guarantees are marginal over history and deployment, not conditional safety for every admitted memory, and do not establish reliability of language-model agents.
+\end{abstract}
+
+\section{Introduction}
+Persistent memory is valuable precisely because an agent can avoid reacquiring information. That saving creates a verification problem: a cached endpoint, configuration value, or execution constraint can faithfully reproduce a past observation while no longer describing the environment. Recent agent experiments identify stale inherited constraints as a cause of consequential decisions and study targeted verification interventions \citep{nakayashiki2026}. Freshness-aware semantic caching also explicitly considers risk and refresh decisions \citep{mansoor2026}. The present work asks a narrower question: \emph{how many checks can unknown-rate memory reuse avoid while controlling the probability of any stale use during a workflow?}
+
+This objective differs from maximizing average freshness. A workflow can have high average per-action accuracy but a substantial probability of at least one failure. It also differs from estimating that an admitted memory is safe with high confidence. A marginal guarantee averages over the history that led to admission as well as future source changes. Those two sources of randomness cannot be silently interchanged.
+
+We isolate the problem in an auditable model: source changes are independent Bernoulli events with unknown constant rates; changed values never revert; checks are authoritative; and the workflow's information dependencies are known. The abstraction excludes reasoning failures and natural-language retrieval. Its purpose is to establish limits on the verification controller, not to simulate an entire language-model agent.
+
+The first result is an exact characterization, rather than only an impossibility bound. Even when the realized source is perfectly stable, a policy required to be reliable for every unknown change rate cannot immediately stop checking. We show that all randomized adaptive policies admit a stable-instance normal form consisting of two adjacent \emph{audit-prefix, reuse-tail} policies. This resolves the best possible stable-instance saving and quantifies the value of prior unchanged observations.
+
+The second result concerns multiple sources. Whole-workflow failure depends on the union of change opportunities exposed by the audit calendar, not the sum of memory ages at every use. A gate that accepts a group only when all its historical observations are unchanged has a sharp, dimension-free marginal certificate. Grouping nevertheless has a cost: a single changing source can cause a large group to reject all reuse. We optimize this tradeoff with a pilot-informed ordered-partition dynamic program whose safety does not require accurate pilot estimates. We also give explicit failures of post-selecting a clean source, assuming independence incorrectly, and transferring a certificate across a rate shift.
+
+\paragraph{Position relative to prior work.}
+Learning change rates from intermittent checks is not new. \citet{upadhyay2019} study binary change observations, confidence intervals, and learning-based crawling for average freshness; \citet{avrachenkov2020} analyze change-rate estimators and freshness allocation. \citet{kriouile2022} study age of incorrect information with an unknown Markovian source. Failure-free reliability demonstration likewise has a long history, including predictive and Bayesian formulations \citep{coolen2005,wilson2019}. Our contribution is not a new estimator, the exponential no-change probability, or the general idea of risk-gated caching. It is the exact adaptive stable-instance normal form, its connection to a sharp multi-source history gate, and selection-safe grouping under a finite-workflow failure objective. We use established fixed-sample binomial confidence bounds as a stronger-guarantee baseline \citep{clopper1934}; we do not claim optional-stopping validity, which requires different inference tools \citep{howard2021}.
+
+\section{Model and two reliability objectives}\label{sec:model}
+Source $i\in\{1,\ldots,N\}$ has unknown rate $h_i\in[0,1]$. Independently across sources and time, its value changes with probability $h_i$ before the action at that time. Each change produces a new, nonrepeating value. Let $\lambda_i=-\log(1-h_i)$, with the usual endpoint convention. An audit observes the current value, updates the cache, and costs $c_i>0$. No change occurs between an audit and the immediate action. All sources are audited at time zero; this common initialization cost is excluded from deployment comparisons.
+
+The workflow requires source $i$ at known times $0<u_{i1}<\cdots<u_{iJ_i}\leq T$. Audits may precede uses. Every required action is executed, and a failure occurs if any required unaudited value is stale. Denote this event by $F_T$. Apart from audit outcomes, neither version labels nor action feedback convey extra information about $h$ before a failure. The model does not permit bypassing the objective by abstention.
+
+Historical data span $m_i$ independent source-change opportunities before time zero. An unchanged pair of endpoint observations certifies that no change occurred over the interval because values do not revert. A history can contain additional intermediate audits, but a clean history means all its observations are unchanged. Therefore
+\begin{equation}
+\Pp_h(\text{source $i$ history is clean})=(1-h_i)^{m_i}=e^{-m_i\lambda_i}.\label{eq:clean}
+\end{equation}
+The $m_i$ are \emph{elapsed opportunities}, not necessarily audit counts. Audit cost, historical span, and independent pilot cost are reported separately.
+
+\paragraph{Marginal workflow reliability.}
+The central requirement is
+\begin{equation}
+\sup_{h\in[0,1]^N}\Pp_h(F_T)\leq\delta.\label{eq:marginal}
+\end{equation}
+The probability includes historical observations, internal randomization, and future changes. For the single-source theorem, the objective is to maximize the expected skipped checks $\Ee_0 K$ when $h=0$. This is an instance-specific objective under a uniform risk constraint, not a minimax expected-cost claim for every environment.
+
+\paragraph{High-confidence conditional safety.}
+For a history-dependent fixed calendar $A(H)$, a different requirement is
+\begin{equation}
+\Pp_h\{H:\risk_h(A(H))>\rho\}\leq\alpha,
+\qquad \risk_h(A)=\Pp_h(F_T\mid A,H),\label{eq:conditional}
+\end{equation}
+where future increments are independent of $H$. It implies a marginal bound $\alpha+(1-\alpha)\rho$. The converse fails. Our main gates satisfy Equation~\eqref{eq:marginal}; a successful gate is \emph{not} a statement that its conditional failure risk is at most $\delta$.
+
+\section{An exact cold-start normal form}\label{sec:normal}
+Consider one source required at every step $1,\ldots,T$, with historical span $m$. Fix $k\in\{0,\ldots,T\}$. The \emph{tail gate} $G_k$ audits every action in the first $T-k$ steps. If the history or any prefix audit contains a change, it audits all remaining actions. Otherwise it reuses memory for the final $k$ actions. Write $q=1-h$ and $n=m+T$. Its failure probability is
+\begin{equation}
+ f_k(h)=q^{n-k}(1-q^k),\qquad f_0(h)=0.\label{eq:tail}
+\end{equation}
+At $h=0$, it saves exactly $k$ checks. This policy uses deployment audits as evidence, rather than treating the entire schedule as fixed in advance.
+
+\begin{theorem}[Exact randomized stable-instance frontier]\label{thm:normal}
+For any randomized adaptive policy $\pi$, let $x=\Ee_0K$, $k=\lfloor x\rfloor$, and $a=x-k$. There is a policy $\widetilde\pi$ that chooses $G_k$ with probability $1-a$ and $G_{k+1}$ with probability $a$, before seeing data, such that
+\begin{equation}
+ \Ee_0K_{\widetilde\pi}=x,
+ \qquad \Pp_h(F_T;\widetilde\pi)=(1-a)f_k(h)+af_{k+1}(h)\leq\Pp_h(F_T;\pi)
+ \quad\text{for every }h.\label{eq:domination}
+\end{equation}
+At $x=T$ only $G_T$ is used. Consequently the optimal stable saving under Equation~\eqref{eq:marginal} is exactly
+\begin{equation}
+ x^*(m,T,\delta)=\max\left\{x\in[0,T]:\sup_h\big[(1-a)f_k(h)+af_{k+1}(h)\big]\leq\delta\right\}.\label{eq:frontier}
+\end{equation}
+\end{theorem}
+
+\paragraph{Why an adaptive policy reduces to two tails.}
+Fix its internal random seed and follow the trajectory with no changes. If it skips a set $S$ of checks, a \emph{first} change at any $t\in S$ produces an immediate failure. These events are disjoint, giving risk at least $\sum_{t\in S}h q^{m+t-1}$. With $|S|=k$, this sum is minimized by the last $k$ times, and equals $f_k(h)$. A tail gate attains the bound. Finally $f_k(h)=q^n(q^{-k}-1)$ is convex in $k$: among distributions over integer skip counts with a fixed mean, adjacent integers minimize its expectation simultaneously for every $h$. Appendix~\ref{app:normal} gives endpoint and randomization details.
+
+Define the increasing function
+\begin{equation}
+\psi(s)=s(1-s)^{(1-s)/s},\quad 0<s<1,\qquad \psi(0)=0,\quad\psi(1)=1,
+\end{equation}
+and let $s_\delta=\psi^{-1}(\delta)$. Direct maximization gives $\sup_h f_k(h)=\psi(k/n)$.
+\begin{corollary}[Closed bound and deterministic optimum]\label{cor:bound}
+Every uniformly reliable policy satisfies
+\begin{equation}
+ \Ee_0 K\leq\min\{T,(m+T)s_\delta\}.\label{eq:continuous}
+\end{equation}
+The deterministic optimum is $\lfloor\min\{T,(m+T)s_\delta\}\rfloor$. The exact randomized optimum lies between this integer and the continuous bound, so the gap is less than one check. At $\delta=.05$, $s_\delta=0.1271738264$. Thus without historical data, at least $87.28\%$ of checks are required in expectation even on a stable source.
+\end{corollary}
+
+The frontier is computable by two scalar root searches, not by enumerating belief-state policies. The least-favorable rate is positive even though the objective is evaluated at zero rate. With $m/T\geq 1/s_\delta-1$, every deployment check can be skipped on the stable instance, but only after the history gate is passed. Figure~\ref{fig:cold} displays this transition. The result says nothing about optimality of tail gates for expected audit cost at an arbitrary nonzero $h$.
+
+\begin{figure}[t]
+\centering\includegraphics[width=.85\linewidth]{figures/cold_start.pdf}
+\caption{Exact optimal stable-instance saving at a 5\% workflow failure budget. The continuous bound differs from the exact frontier by less than one check. Historical span and deployment horizon are distinct resources.}\label{fig:cold}
+\end{figure}
+
+\section{Sharp joint-history certificates}\label{sec:joint}
+For multiple sources we restrict the reuse calendar to be fixed before its gate history is observed. A gate accepts a group only if every source in that group has a clean history; otherwise it audits every required group use. This restriction enables exact risk analysis, but is not claimed optimal among all multi-source adaptive policies.
+
+\subsection{Count exposed change opportunities, not memory ages}
+Let $u_{i0}=0$, $d_{ij}=u_{ij}-u_{i,j-1}$, and $s_{ij}=1$ when use $j$ skips a check. Audits only at required uses suffice for fixed-calendar cost minimization: an off-use audit can be deferred to the next use without increasing cost or stale-use risk, under our unconstrained, time-independent audit costs.
+\begin{proposition}[Exposure identity]\label{prop:exposure}
+For a fixed calendar,
+\begin{equation}
+ E_i=\sum_{j=1}^{J_i}d_{ij}s_{ij},\qquad
+ \risk_h(A)=1-e^{-\sum_i E_i\lambda_i}.\label{eq:exposure}
+\end{equation}
+Here $E_i$ is the size of the union of intervals between the last audit and each unaudited use. Repeated uses do not create independent failure events.
+\end{proposition}
+For example, reusing an initially current value at steps 1 through 10 exposes 10 change opportunities, not $1+\cdots+10=55$. Known-rate audit minimization is a knapsack problem: skipping use $(i,j)$ saves $c_i$ and spends $\lambda_i d_{ij}$ from the log-risk budget $-\log(1-\delta)$.
+
+\subsection{The sharp marginal gate}
+For a group $G$, write $m=(m_i)_{i\in G}$ and $E=(E_i)_{i\in G}$. Define $r=\max_{i\in G}E_i/m_i$, interpreting positive exposure with zero history as $r=\infty$, and $0/0$ as zero. Let
+\begin{equation}
+ \phi(r)=\frac{r}{(1+r)^{1+1/r}}=\psi\!\left(\frac{r}{1+r}\right),
+ \quad \phi(0)=0,\quad\phi(\infty)=1.\label{eq:phi}
+\end{equation}
+\begin{theorem}[Joint gate, exact risk and worst case]\label{thm:gate}
+A fixed group and fixed calendar, accepted only after a clean history, satisfy
+\begin{equation}
+ \Pp_h(F_G)=e^{-\sum_{i\in G}m_i\lambda_i}
+ \left(1-e^{-\sum_{i\in G}E_i\lambda_i}\right),\qquad
+ \sup_h\Pp_h(F_G)=\phi(r).\label{eq:gate}
+\end{equation}
+If $0<r<\infty$, the bound is attained by making only a maximizing-ratio source $j$ change, with $\lambda_j=\log(1+r)/E_j$.
+\end{theorem}
+
+The proof sets $x=\sum m_i\lambda_i$ and $y=\sum E_i\lambda_i\leq rx$, then maximizes $e^{-x}(1-e^{-rx})$. The maximizing source construction proves sharpness, not only sufficiency. Inverting the bound gives a reusable exposure allowance
+\begin{equation}
+ E_i\leq r_\delta m_i\quad\text{for every }i,\qquad r_\delta=\frac{s_\delta}{1-s_\delta}.\label{eq:allowance}
+\end{equation}
+For fixed group budget and constant per-source audit cost, an exact calendar compiler sorts each source's gaps and skips as many shortest gaps as this allowance permits. No confidence interval for each rate is needed. The dimension-free guarantee concerns \emph{risk}; the probability of accepting the group can decay rapidly with the number of changing sources.
+
+\begin{proposition}[Price of conditional certification]\label{prop:conditional}
+For the same gate, with nonzero exposure, Equation~\eqref{eq:conditional} holds uniformly exactly when
+\begin{equation}
+ r\leq\frac{-\log(1-\rho)}{\log(1/\alpha)}.\label{eq:pac}
+\end{equation}
+For one source this requires $m\geq E\log(1/\alpha)/[-\log(1-\rho)]$, whereas the marginal gate requires only $m\geq E/r_\delta$.
+\end{proposition}
+The difference is not a free improvement over a stronger guarantee. At the least-favorable parameter for the marginal gate, the failure probability \emph{conditional on acceptance} is $r/(1+r)$. At $\delta=.05$ this is approximately $12.72\%$, despite marginal failure at most $5\%$. Applications requiring every admitted memory to receive a high-confidence safety statement must use the stronger formulation.
+
+\section{Learning groups without invalidating the gate}\label{sec:groups}
+One large group shares a generous exposure allowance but rejects reuse whenever any member changes. Separate sources avoid this coupling but must split the risk budget. We use independent pilot observations to learn an intermediate grouping.
+
+\begin{theorem}[Disjoint composition and independent selection]\label{thm:compose}
+For disjoint groups $\mathcal G$ fixed independently of their gate histories, let $r_G$ be their exposure/history ratios and $S_G$ their accepted-calendar audit savings. Then
+\begin{align}
+ \sup_h\Pp_h(F_T)&=1-\prod_{G\in\mathcal G}(1-\phi(r_G)),\label{eq:product}\\
+ \Ee_h[\text{audit saving}]&=\sum_{G\in\mathcal G}S_G e^{-\sum_{i\in G}m_i\lambda_i}.\label{eq:utility}
+\end{align}
+These statements apply conditionally on any independent pilot used to select the groups and calendars. Thus arbitrary pilot estimation error changes utility but not the uniform risk bound.
+\end{theorem}
+
+\paragraph{An exact restricted compiler.}
+Let $B=-\log(1-\delta)$ and discretize it into $L$ units. From pilot estimates $\widehat\lambda_i$, order sources by $m_i\widehat\lambda_i$. Allow contiguous groups in this fixed order. A group receiving $z$ units has $\delta_z=1-e^{-zB/L}$; Equation~\eqref{eq:allowance} determines its maximum skipped-check saving $S(a,b,z)$. Its predicted saving is
+\begin{equation}
+ v(a,b,z)=S(a,b,z)\exp\!\left(-\sum_{i=a}^{b-1}m_i\widehat\lambda_i\right).
+\end{equation}
+The recursion
+\begin{equation}
+ V(b,z)=\max_{0\leq a<b,\,0\leq w\leq z}\{V(a,z-w)+v(a,b,w)\},
+ \quad V(0,z)=0\label{eq:dp}
+\end{equation}
+finds the exact best predicted saving in this ordered-partition, grid-budget class. It takes $O(N^2L^2)$ time after source menus are formed. The output is certified because the group log budgets sum to at most $B$. Neither global optimality over all partitions nor optimal expected cost at the true unknown rates is asserted.
+
+\paragraph{Why the independent pilot matters.}
+If a fixed source has clean-history probability $a$ and subsequent failure probability $b$, its gate risk is $ab$. Selecting the first clean source among $N$ identical independent histories instead gives $[1-(1-a)^N]b$. With $m=1000$, $E=145$, and $N=8$, a fixed-source certificate below $.05$ becomes actual failure $.1243$. The compiler must not use those same gate outcomes to decide which group to trust. Independence, not predictive accuracy, is the essential safeguard. More generally, post-selection requires a certificate for the selection procedure itself.
+
+\section{Synthetic experiments}\label{sec:exp}
+All data are generated from specified stochastic or finite symbolic environments. There is no language-model inference, training, external dataset, or API use. The code provides exact calculations alongside an independent world-state simulator. Full parameters, numerical tolerances, and additional results appear in Appendix~\ref{app:experiments}.
+
+\paragraph{Checks against finite oracles.}
+We enumerated every deterministic adaptive audit policy at horizons 1 through 4: 1,856 policies in total. Polynomial maximization over $h\in[0,1]$ verified the lower bound and an attaining tail gate for every skip count. Ten randomized-policy linear programs agreed with the exact frontier within $8\times10^{-13}$. These finite checks corroborate, rather than prove, Theorem~\ref{thm:normal}. We also checked the exposure formula against 71,808 explicit two-source change worlds, generated 300 joint-gate and 300 composition sharpness witnesses, and tested the ordered-partition dynamic program against exhaustive small partitions. The unit suite contains 83 passing tests.
+
+\paragraph{Workflow design.}
+Each workflow has eight sources, 200 time steps, and 32 uses per source, combining clustered and scattered uses. Source-specific audit costs are one or two units; checking every required use costs 384. We vary historical span $m\in\{200,1000,5000\}$ and three hazard regimes: stable, mixed, and active. Ten seeds per setting perturb hazards and use times. The pilot has 64 independent windows of length 50 per source, and the compiler uses $L=16$ budget units. We evaluate 900 method--setting decisions, integrating gate histories and future changes exactly for the clean-gate methods, and simulate 54,000 full workflows over 27 matched settings as a separate implementation check.
+
+\paragraph{Comparators and probability accounting.}
+We compare a single joint group, equal-risk singleton groups, pilot-learned groups, a rate-informed grouping reference, a joint conditional certificate with $\alpha=\rho=.025$, Clopper--Pearson (CP) rate-bound calendars, and a known-rate knapsack calendar. Point-estimated calendars and a global expiration-time baseline are also included in the raw results but are not uniformly certified. The rate-informed methods are information references, not implementable unknown-rate policies. CP calendars use ten fixed-gap historical observations and a total confidence budget $.025$; their CSV risks are conditional on those realized observations, unlike analytically marginalized clean-gate risks. A separate 1,200-dataset calibration experiment checks that distinction.
+
+\begin{table}[t]
+\centering\small\input{table_savings.tex}
+\caption{Mean \emph{deployment} audit cost saved (\%) at $m=1000$, $\delta=.05$, ten seeds. Pilot and historical acquisition costs are excluded from this table and reported separately. The conditional-certificate methods provide a stronger guarantee; their smaller savings are not evidence that they are incorrectly designed.}\label{tab:main}
+\end{table}
+
+\paragraph{Gains are regime-dependent.}
+Table~\ref{tab:main} shows the intended tradeoff. In the mixed regime at $m=1000$, pilot-learned groups save $59.1\%$ of deployment audit cost, versus $31.3\%$ for separate sources and $1.9\%$ for a single group. Their mean exact marginal failure probability is $.01784$, below the uniform $.05$ bound. In the stable regime, one group saves $83.3\%$, slightly more than pilot grouping's $81.7\%$. Thus learning a partition is not uniformly beneficial.
+
+\paragraph{Negative results and evidence costs.}
+Longer histories increase the permissible exposure but also make a clean gate less likely to pass. At $m=5000$ in the stable regime, single-group savings fall to $55.4\%$, while separate sources save $77.8\%$. In the mixed regime, pilot grouping saves $44.0\%$, less than the singleton baseline's $52.4\%$ (Figure~\ref{fig:grouping}). The pilot costs 768 weighted audits, twice one fully audited workflow's deployment cost; obtaining it solely for one workflow is not cost-effective in these experiments. A clean-history endpoint observation adds 12 units beyond the common time-zero initialization; the CP history adds 120. Our results demonstrate deployment savings given evidence, not unconditional end-to-end cost savings. Amortizing evidence across workflows does not automatically preserve a single global failure budget.
+
+\begin{figure}[t]
+\centering\includegraphics[width=.85\linewidth]{figures/grouping_mixed.pdf}
+\caption{Mixed-rate workflows: grouping improves reuse for intermediate history spans but a noisy pilot can underperform separate-source gates at long spans. Rate-informed grouping isolates the effect of estimation error. Values integrate gate histories exactly, then average ten workflow/pilot seeds.}\label{fig:grouping}
+\end{figure}
+
+\paragraph{Stress tests.}
+All clean-gate decisions obey their analytic bounds in the specified model. This does not survive arbitrary misspecification. At eight sources, post-selecting a clean source raises a nominal $.05$ risk to $.1243$; shared source changes with disjoint future exposure intervals raise it to $.2765$. Doubling the deployment hazard in a single-source witness gives $.0933$. These are constructive counterexamples, not estimated robustness guarantees.
+
+\section{Limitations and conclusion}
+The sharp adaptive result optimizes savings on the stable instance; the multi-source result covers fixed calendars accepted by clean-history gates. Neither solves general adaptive multi-source control. Source independence, stationary hazards, nonreverting versions, known use dependencies, and immediate truthful audits are essential. Reverting values invalidate endpoint cleanliness; correlated or shifted changes invalidate the displayed certificate unless reanalyzed. The finite experiments do not test language-model cognition or prove low failure rates in deployed agents.
+
+Within this scope, the normal form characterizes when reliable memory reuse is possible and exactly how much stable-instance checking it can avoid. Joint histories enable a sharp multi-source gate, while independent pilot selection controls the tradeoff between shared risk budgets and group rejection. The central practical distinction is between reusing a memory under a marginal workflow guarantee and certifying that a particular admitted memory is conditionally safe.
+
+\clearpage
+\section*{AI use statement}
+Generative AI was used extensively for research ideation, literature retrieval, theorem formulation and proof development, implementation, test design, synthetic-experiment execution, analysis, and manuscript drafting. The computations reported here were executed using the accompanying code; numerical checks are not independent proof verification. This research draft has not yet received independent human proof and novelty review. No language-model calls were used as experimental subjects or synthetic data generators: all experimental randomness is produced by explicit numerical simulators. The submitting authors must review the arguments, citations, artifacts, and disclosure before making a submission; this draft does not assert that such review has already occurred.
+
+\section*{Reproducibility statement}
+The supplement contains full proofs, source code, deterministic seeds, 12 scientific CSV files with hashes, and scripts for regeneration. Main tables and figures are generated from those CSVs. Tiny instances are checked by exhaustive policy or world enumeration independently of the closed-form risk routines. The repository also records excluded acquisition costs and assumption-failure examples. No paid service or specialized accelerator is required to reproduce the experiments.
+
+\section*{Ethics statement}
+This work uses no personal data, human participants, or external systems controlled by an agent. Its guarantees should not be deployed as a substitute for source checks in high-stakes applications without validating the model and the meaning of the probability guarantee. In particular, a marginal failure budget can permit higher conditional risk for a subset of accepted histories. The paper explicitly reports this limitation rather than describing admitted memories as individually safe.
+
+\input{references.tex}
+\clearpage
+\appendix
+\input{appendix.tex}
+\end{document}
