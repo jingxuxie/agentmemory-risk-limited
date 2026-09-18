@@ -1,13 +1,23 @@
-"""Idempotent editorial fixes, matched by exact old text; never edits new content."""
+"""Idempotent title/code-block layout fixes; never rewrites scientific prose."""
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
-REPLACEMENTS={'paper/main.tex': [['Sharp Cold-Start Limits and Joint-History Audit Schedules}', 'Sharp Cold-Start Limits and Joint-History\\\\Audit Schedules}'], ['Generative AI was used extensively for research ideation, literature retrieval, theorem formulation and proof development, implementation, test design, synthetic-experiment execution, analysis, and manuscript drafting. The computations reported here were executed using the accompanying code; numerical checks are not independent proof verification. This research draft has not yet received independent human proof and novelty review. No language-model calls were used as experimental subjects or synthetic data generators: all experimental randomness is produced by explicit numerical simulators. The submitting authors must review the arguments, citations, artifacts, and disclosure before making a submission; this draft does not assert that such review has already occurred.', 'Generative AI was used extensively for ideation, literature retrieval, theorem and proof development, implementation, test design, experiment execution, analysis, and drafting. Experiments were executed by the supplied numerical simulators; no language-model calls generated experimental data or acted as experimental subjects. Numerical checks are not independent proof verification. This draft has not received independent human proof or novelty review. Before submission, the authors must review the arguments, citations, artifacts, and this disclosure.']], 'paper/appendix.tex': [['\\begin{verbatim}\npython -m pip install -r requirements.txt\npython -m pytest -q\npython experiments/run_all.py\npython experiments/additional_checks.py\npython experiments/make_figures.py\nmake paper\n\\end{verbatim}', '\\begin{minipage}{\\linewidth}\n\\begin{verbatim}\npython -m pip install -r requirements.txt\npython -m pytest -q\npython experiments/run_all.py\npython experiments/additional_checks.py\npython experiments/make_figures.py\nmake paper\n\\end{verbatim}\n\\end{minipage}'], ['\\paragraph{Amortization and future directions.}\nHistorical evidence acquired for other reasons may make deployment savings worthwhile. Purchasing an expensive pilot solely for one short workflow often does not. Reusing an independent pilot is harmless for per-workflow safety if each new gate history is properly specified, but a global multi-workflow target requires allocation or a joint analysis of its total failure event. A possible extension is to optimize evidence acquisition and deployment jointly; another is to replace the clean gate with an outcome-rich testing rule. Both need new guarantees rather than applying the present formulas outside their stated domains.\n', '\\paragraph{Amortization and future directions.}\nHistorical evidence acquired for other purposes can make reuse worthwhile, but purchasing a pilot for one short workflow may not. Reusing a pilot with new, properly specified gate histories preserves per-workflow safety; a global multi-workflow target needs its own risk allocation or joint analysis. Optimal evidence acquisition and outcome-rich testing rules remain outside our guarantees.\n']]}
+BLOCK=("\\begin{verbatim}\n"
+       "python -m pip install -r requirements.txt\n"
+       "python -m pytest -q\n"
+       "python experiments/run_all.py\n"
+       "python experiments/additional_checks.py\n"
+       "python experiments/make_figures.py\n"
+       "make paper\n\\end{verbatim}")
 
 def main():
-    for name,pairs in REPLACEMENTS.items():
-        p=ROOT/name; text=p.read_text()
-        for old,new in pairs: text=text.replace(old,new)
-        p.write_text(text)
-    print('Editorial layout fixes applied (idempotent exact-text matching).')
+    p=ROOT/'paper/main.tex'; text=p.read_text()
+    text=text.replace('Sharp Cold-Start Limits and Joint-History Audit Schedules}',
+                      r'Sharp Cold-Start Limits and Joint-History\\Audit Schedules}')
+    p.write_text(text)
+    p=ROOT/'paper/appendix.tex'; text=p.read_text()
+    wrapped='\\begin{minipage}{\\linewidth}\n'+BLOCK+'\n\\end{minipage}'
+    if wrapped not in text: text=text.replace(BLOCK,wrapped)
+    p.write_text(text)
+    print('Title and code-block layout checked; scientific prose unchanged.')
 
 if __name__=='__main__': main()
